@@ -7,23 +7,55 @@ npm install
 npm run dev
 ```
 
-The frontend uses `http://localhost:8005` for its backend while running in
-development mode. Copy `.env.example` to `.env.local` to use a different backend
-URL.
+Local development reads `.env.development`, which points the frontend to
+`http://localhost:8005`. Production builds do not load that file. Copy
+`.env.example` to `.env.local` only if you want to override the API URL locally.
 
-## Deploy to Vercel
+## Deploy to GitHub Pages
 
-1. Push this project to a GitHub repository.
-2. In Vercel, choose **Add New Project** and import that repository.
-3. Keep the detected Vite settings: build command `npm run build` and output
-   directory `dist`.
-4. In the Vercel project settings, add `VITE_API_BASE_URL` with the public URL
-   of the deployed backend, such as `https://api.example.com` (no trailing
-   slash), then redeploy.
-5. Deploy to get a free `*.vercel.app` address. You can change its subdomain in
-   the project's Domains settings.
+The GitHub Actions workflow builds and publishes the static frontend on every
+push to `main`. In the repository, open **Settings → Pages** and select
+**GitHub Actions** as the build and deployment source. The public URL will be
+`https://abhishek620799.github.io/BUILD_WEBSITE_AI/`.
 
-The backend must be deployed separately and allow browser requests from the
-Vercel site origin (CORS). The backend also needs to serve `/api/project` and
-`/api/preview`. Without a deployed backend, the frontend can load, but project
-generation and preview will not work.
+To call a publicly reachable Spring Boot backend, add a repository variable
+named `VITE_API_URL` under **Settings → Secrets and variables → Actions →
+Variables**. Set it to the backend HTTPS origin, without a trailing slash or
+`/api`, then rerun the deployment workflow. Do not set it to `localhost`.
+
+The frontend's static UI can load without a backend. Project generation and the
+preview iframe require the backend to be publicly reachable at `VITE_API_URL`.
+The backend's public HTTPS origin cannot be `localhost`; a visitor's
+`localhost` refers to their own device. For Vercel instead, import this
+repository and configure the same `VITE_API_URL` environment variable in the
+Vercel project settings.
+
+## Spring Boot CORS
+
+Add a configuration class to the Spring Boot backend and replace the example
+origin with the exact Vercel origin:
+
+```java
+package your.backend.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+                .allowedOrigins("https://YOUR-FRONTEND-DOMAIN.vercel.app")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*");
+    }
+}
+```
+
+If Spring Security is enabled, also enable CORS in its `SecurityFilterChain`
+with `http.cors(cors -> {})` (and ensure CSRF policy permits the API's POST
+request as appropriate). Do not use `*` as the allowed origin. CORS is only a
+browser access policy; it does not make a laptop-hosted backend reachable from
+the public internet.

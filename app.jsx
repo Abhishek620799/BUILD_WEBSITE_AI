@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import "./App.css";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 function App() {
 
   const [projectName, setProjectName] = useState("");
@@ -16,15 +18,12 @@ function App() {
   const [result, setResult] = useState("");
   const [preview, setPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") ||
-    (import.meta.env.DEV ? "http://localhost:8005" : "");
 
   const generateProject = async () => {
 
-    if (!apiBaseUrl) {
+    if (!API_URL) {
       setResult(
-        "Backend is not configured. Set VITE_API_BASE_URL to your deployed backend URL in Vercel project settings."
+        "Backend is not configured. Set VITE_API_URL to your deployed backend URL in Vercel project settings."
       );
       return;
     }
@@ -89,16 +88,13 @@ After completing the project, provide a short summary containing:
 
     try {
 
-      const response = await fetch(
-        `${apiBaseUrl}/api/project`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain"
-          },
-          body: prompt
-        }
-      );
+      const response = await fetch(`${API_URL}/api/project`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain"
+        },
+        body: prompt
+      });
 
       if (!response.ok) {
         throw new Error("Backend request failed");
@@ -108,7 +104,7 @@ After completing the project, provide a short summary containing:
 
       setResult(data);
 
-      setPreviewUrl(`${apiBaseUrl}/api/preview`);
+      setPreviewUrl(`${API_URL}/api/preview`);
       setPreview(true);
 
     } catch (error) {
